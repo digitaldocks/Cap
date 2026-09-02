@@ -132,6 +132,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
 	matcher: [
-		"/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
+		// Anything with a file extension is a static asset in public/ and must not
+		// be run through the self-hosted allowlist below, which would redirect it
+		// to /login and serve HTML in its place.
+		"/((?!api|_next/static|_next/image|.*\\.[a-zA-Z0-9]{2,12}$).*)",
 	],
 };
