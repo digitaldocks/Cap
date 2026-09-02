@@ -420,6 +420,34 @@ export const createS3BucketAccess = Effect.gen(function* () {
 						{ expiresIn: 3600 },
 					),
 				),
+			// Same URL, signed against the internal endpoint. The media server
+			// runs inside the deployment and cannot resolve the public host.
+			getInternalPresignedUploadPartUrl: (
+				key: string,
+				uploadId: string,
+				partNumber: number,
+				args?: Omit<
+					S3.UploadPartCommandInput,
+					"Key" | "Bucket" | "PartNumber" | "UploadId"
+				>,
+			) =>
+				wrapS3Promise(
+					provider.getInternal.pipe(
+						Effect.map((client) =>
+							S3Presigner.getSignedUrl(
+								client,
+								new S3.UploadPartCommand({
+									...args,
+									Bucket: provider.bucket,
+									Key: key,
+									UploadId: uploadId,
+									PartNumber: partNumber,
+								}),
+								{ expiresIn: 3600 },
+							),
+						),
+					),
+				),
 			complete: (
 				key: string,
 				uploadId: string,

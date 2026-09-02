@@ -50,6 +50,17 @@ type MultipartAccess = {
 			"Key" | "Bucket" | "PartNumber" | "UploadId"
 		>,
 	) => Effect.Effect<string, StorageDomain.StorageError>;
+	// Signed against the internal endpoint, for callers that run inside the
+	// deployment (the media server) and cannot resolve the public host.
+	getInternalPresignedUploadPartUrl: (
+		key: string,
+		uploadId: string,
+		partNumber: number,
+		args?: Omit<
+			S3.UploadPartCommandInput,
+			"Key" | "Bucket" | "PartNumber" | "UploadId"
+		>,
+	) => Effect.Effect<string, StorageDomain.StorageError>;
 	complete: (
 		key: string,
 		uploadId: string,
@@ -175,6 +186,23 @@ const makeS3MultipartAccess = (s3: S3BucketAccess): MultipartAccess => ({
 	) =>
 		mapStorageError(
 			s3.multipart.getPresignedUploadPartUrl(key, uploadId, partNumber, args),
+		),
+	getInternalPresignedUploadPartUrl: (
+		key: string,
+		uploadId: string,
+		partNumber: number,
+		args?: Omit<
+			S3.UploadPartCommandInput,
+			"Key" | "Bucket" | "PartNumber" | "UploadId"
+		>,
+	) =>
+		mapStorageError(
+			s3.multipart.getInternalPresignedUploadPartUrl(
+				key,
+				uploadId,
+				partNumber,
+				args,
+			),
 		),
 	complete: (
 		key: string,
@@ -423,6 +451,17 @@ const makeGoogleDriveAccess = ({
 				Effect.map((UploadId) => ({ UploadId })),
 			),
 		getPresignedUploadPartUrl: (
+			_key: string,
+			uploadId: string,
+			_partNumber: number,
+			_args?: Omit<
+				S3.UploadPartCommandInput,
+				"Key" | "Bucket" | "PartNumber" | "UploadId"
+			>,
+		) => Effect.succeed(uploadId),
+		// Drive resumable sessions are a single URL, there is no public/internal
+		// split to make here.
+		getInternalPresignedUploadPartUrl: (
 			_key: string,
 			uploadId: string,
 			_partNumber: number,

@@ -124,7 +124,7 @@ export async function POST(
 			if ("response" in multipartContext) return multipartContext.response;
 
 			const url = await multipartContext.bucket.multipart
-				.getPresignedUploadPartUrl(
+				.getInternalPresignedUploadPartUrl(
 					payload.data.key,
 					payload.data.uploadId,
 					payload.data.partNumber,

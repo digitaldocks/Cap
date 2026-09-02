@@ -360,7 +360,7 @@ async function buildDesktopSegmentsMuxBody(
 	}
 
 	const videoInitUrl = await bucket
-		.getSignedObjectUrl(segSource.getVideoInitKey(), {
+		.getInternalSignedObjectUrl(segSource.getVideoInitKey(), {
 			expiresIn: MEDIA_SERVER_PRESIGNED_GET_EXPIRES_SECONDS,
 		})
 		.pipe(runWorkflowPromise);
@@ -368,7 +368,7 @@ async function buildDesktopSegmentsMuxBody(
 	const videoSegmentUrls = await Effect.all(
 		manifest.video_segments.map((seg) => {
 			const entry = Video.normalizeSegmentEntry(seg);
-			return bucket.getSignedObjectUrl(
+			return bucket.getInternalSignedObjectUrl(
 				segSource.getVideoSegmentKey(entry.index),
 				{
 					expiresIn: MEDIA_SERVER_PRESIGNED_GET_EXPIRES_SECONDS,
@@ -383,14 +383,14 @@ async function buildDesktopSegmentsMuxBody(
 
 	if (manifest.audio_init_uploaded && manifest.audio_segments.length > 0) {
 		audioInitUrl = await bucket
-			.getSignedObjectUrl(segSource.getAudioInitKey(), {
+			.getInternalSignedObjectUrl(segSource.getAudioInitKey(), {
 				expiresIn: MEDIA_SERVER_PRESIGNED_GET_EXPIRES_SECONDS,
 			})
 			.pipe(runWorkflowPromise);
 		audioSegmentUrls = await Effect.all(
 			manifest.audio_segments.map((seg) => {
 				const entry = Video.normalizeSegmentEntry(seg);
-				return bucket.getSignedObjectUrl(
+				return bucket.getInternalSignedObjectUrl(
 					segSource.getAudioSegmentKey(entry.index),
 					{
 						expiresIn: MEDIA_SERVER_PRESIGNED_GET_EXPIRES_SECONDS,
