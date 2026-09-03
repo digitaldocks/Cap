@@ -16,6 +16,49 @@ const ffmpegTracingIncludes = [
 	"./node_modules/.pnpm/ffmpeg-static@5.3.0/node_modules/ffmpeg-static/ffmpeg",
 ];
 
+const httpImageEndpoint = () => {
+	const endpoint =
+		process.env.S3_PUBLIC_ENDPOINT ??
+		(process.env.NODE_ENV === "development" ? "http://localhost:9000" : null);
+	if (!endpoint) return null;
+
+	try {
+		const url = new URL(endpoint);
+		return url.protocol === "http:" ? url : null;
+	} catch {
+		return null;
+	}
+};
+
+const httpImagePatterns = () => {
+	const url = httpImageEndpoint();
+	if (!url) return [];
+	return [
+		{
+			protocol: "http",
+			hostname: url.hostname,
+			port: url.port,
+			pathname: "**",
+		},
+	];
+};
+
+// The optimizer fetches server-side and refuses hosts that resolve to a
+// private address. That is the right default against SSRF, but a self-hosted
+// object store on localhost or a LAN address is exactly that, so allow it only
+// when the configured endpoint is itself one. Anything on https is unaffected.
+const allowLocalImageIp = () => {
+	const url = httpImageEndpoint();
+	if (!url) return false;
+	return (
+		url.hostname === "localhost" ||
+		/^127\./.test(url.hostname) ||
+		/^10\./.test(url.hostname) ||
+		/^192\.168\./.test(url.hostname) ||
+		/^172\.(1[6-9]|2\d|3[01])\./.test(url.hostname)
+	);
+};
+
 const nextConfig = {
 	reactStrictMode: true,
 	serverExternalPackages: ["ffmpeg-static", "prettier"],
@@ -75,13 +118,14 @@ const nextConfig = {
 				port: "",
 				pathname: "**",
 			},
-			process.env.NODE_ENV === "development" && {
-				protocol: "http",
-				hostname: "localhost",
-				port: "9000",
-				pathname: "**",
-			},
+			// Self-hosted object storage is usually served over plain http
+			// (MinIO in the shipped compose file), and the wildcard above only
+			// covers https, so the optimizer refuses every avatar, icon and
+			// thumbnail with a 400. Point S3_PUBLIC_ENDPOINT at the endpoint the
+			// browser uses; it is read at build time, so pass it as a build arg.
+			...httpImagePatterns(),
 		].filter(Boolean),
+		dangerouslyAllowLocalIP: allowLocalImageIp(),
 	},
 	async rewrites() {
 		return [

@@ -13,6 +13,12 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm i --fro
 ARG NEXT_PUBLIC_DOCKER_BUILD=true
 ENV NEXT_PUBLIC_WEB_URL=http://localhost:3000
 
+# Read at build time by next.config.mjs to allow the image optimizer to fetch
+# from object storage served over plain http. Override to match the endpoint
+# the browser will use.
+ARG S3_PUBLIC_ENDPOINT=http://localhost:9000
+ENV S3_PUBLIC_ENDPOINT=$S3_PUBLIC_ENDPOINT
+
 RUN pnpm run build:web
 
 
