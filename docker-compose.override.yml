@@ -1,0 +1,28 @@
+# Local build of the fork. Upstream docker-compose.yml pulls
+# ghcr.io/capsoftware/cap-web:latest, which does not carry our self-host fixes
+# (see apps/web/proxy.ts and apps/web/workflows/finalize-desktop-recording.ts).
+services:
+  cap-web:
+    image: dd/cap-web:local
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Must match S3_PUBLIC_ENDPOINT in docker-compose.yml. next.config.mjs
+        # reads it at build time so the image optimizer may fetch from MinIO.
+        S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_URL:-http://localhost:9000}
+
+  # The Next image optimizer fetches server-side, so cap-web has to be able to
+  # reach the browser-facing S3 endpoint. With MinIO on localhost:9000 that is
+  # the container itself, and the host is covered by the SigV4 signature, so
+  # the URL cannot be rewritten. This forwards cap-web's own localhost:9000 to
+  # MinIO instead. A hosted deployment uses a real domain and does not need it.
+  minio-localhost-shim:
+    container_name: cap-minio-shim
+    image: alpine/socat:latest
+    network_mode: "service:cap-web"
+    depends_on:
+      cap-web:
+        condition: service_started
+    restart: unless-stopped
+    command: TCP-LISTEN:9000,fork,reuseaddr TCP:minio:9000
